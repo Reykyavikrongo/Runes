@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "RuneSpell.h"
+#include "RuneSpellBook.h"
 #include "RuneInvokerComponent.generated.h"
 
 
@@ -20,6 +21,9 @@ public:
 
 	UPROPERTY()
 	class ARuneRing* RuneRing;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spells")
+	TObjectPtr<class URuneSpellBook> SpellBook;
 
 public:
 	void Initialize(ARuneRing* InRuneRing);

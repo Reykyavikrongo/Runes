@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "RuneRing.h"
+#include "RuneSpell.h"
 #include "RuneSpellData.generated.h"
 
 /**
@@ -13,10 +14,19 @@
 UCLASS(BlueprintType)
 class RUNES_API URuneSpellData : public UDataAsset
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<URuneSpell> SpellClass;
 
-	//UPROPERTY(BlueprintCallable)
-	//FString GetRunePatternAsString() const;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TArray<ERune> RunePattern;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FName SpellName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UTexture2D* Icon;
 };
+

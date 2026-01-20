@@ -7,6 +7,27 @@
 #include "RuneRing.h"
 #include "RuneSpell.generated.h"
 
+class ARunesCharacter;
+
+USTRUCT(BlueprintType)
+struct FSpellCastContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	ARunesCharacter* Caster = nullptr;
+
+	UPROPERTY()
+	AActor* Target = nullptr;
+
+	UPROPERTY()
+	FVector CastDirection = FVector::ZeroVector;
+
+	UPROPERTY()
+	ERune VariantRune; // optional
+};
+
+
 /**
  * 
  */
@@ -29,9 +50,9 @@ public:
 	UTexture2D* Icon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool CastStatus;
+	bool CanBeCast;
 
 public:
 	UFUNCTION(BlueprintCallable)
-	virtual void Cast(class ARunesCharacter* Caster);
+	virtual void Cast(const FSpellCastContext& Context);
 };

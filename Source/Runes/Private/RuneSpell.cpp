@@ -5,10 +5,10 @@
 
 URuneSpell::URuneSpell()
 {
-	CastStatus = false;
+	CanBeCast = false;
 }
 
-void URuneSpell::Cast(ARunesCharacter* Caster)
+void URuneSpell::Cast(const FSpellCastContext& Context)
 {
 	//base spell does nothing
 }
