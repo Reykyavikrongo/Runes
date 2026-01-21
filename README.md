@@ -1,0 +1,1 @@
+the next thing to do is: add more spells, dont need to be implemented tho, lock on system, controller support, basic training dummy, make spells be cast to the direction that is held not where the character is looking
