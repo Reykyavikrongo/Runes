@@ -6,6 +6,26 @@
 #include "RuneSpell.h"
 #include "RuneSpellData.h"
 
+void URuneInvokerComponent::AddInvokedSpell(URuneSpell* RuneSpell)
+{
+    // Remove existing instance of the same spell (no duplicates)
+    InvokedSpells.RemoveAll(
+        [&](URuneSpell* Existing)
+        {
+            return Existing && Existing->GetClass() == RuneSpell->GetClass();
+        }
+    );
+
+    // Insert newest spell at the front
+    InvokedSpells.Insert(RuneSpell, 0);
+
+    // Enforce max size (FIFO: remove oldest at the end)
+    if (InvokedSpells.Num() > 3)
+    {
+        InvokedSpells.RemoveAt(InvokedSpells.Num() - 1);
+    }
+}
+
 void URuneInvokerComponent::Initialize(ARuneRing* InRuneRing)
 {
 	RuneRing = InRuneRing;
@@ -49,12 +69,7 @@ void URuneInvokerComponent::InvokeSpell()
             Spell->Icon = Data->Icon;
             Spell->RunePattern = Data->RunePattern;
 
-            if (InvokedSpells.Num() >= 3)
-            {
-                InvokedSpells.RemoveAt(0);
-            }
-
-            InvokedSpells.Add(Spell);
+            AddInvokedSpell(Spell);
             GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Added Invoked Spells"));
             return;
         }

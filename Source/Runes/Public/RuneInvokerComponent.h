@@ -25,6 +25,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spells")
 	TObjectPtr<class URuneSpellBook> SpellBook;
 
+	void AddInvokedSpell(URuneSpell* RuneSpell);
+
 public:
 	void Initialize(ARuneRing* InRuneRing);
 
