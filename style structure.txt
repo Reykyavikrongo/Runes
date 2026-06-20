@@ -1,0 +1,274 @@
+========================================================
+STYLE + ADVANTAGE SYSTEM ARCHITECTURE (UNREAL C++)
+========================================================
+
+GOAL
+--------------------------------------------------------
+A modular, data-driven style system that:
+- rewards movement, positioning, spell usage, and creativity
+- avoids hardcoded combat logic
+- scales by adding new events/rules without rewriting core code
+- feeds into a single "Advantage Meter" (win condition system)
+
+========================================================
+HIGH LEVEL FLOW
+========================================================
+
+[Gameplay Systems]
+    |
+    |  (movement, spells, enemies, collisions)
+    v
+[STYLE EVENT DISPATCH]
+    |
+    |  StyleEvent + Context
+    v
+[STYLE MANAGER COMPONENT]
+    |
+    |-- applies rules
+    |-- calculates score
+    |-- updates advantage meter
+    v
+[UI + GAME STATE]
+    |
+    |-- style rank
+    |-- advantage bar (player vs enemy)
+    |-- combo display
+
+========================================================
+CORE COMPONENTS
+========================================================
+
+1. UStyleManagerComponent
+--------------------------------------------------------
+Single central system per player (or per combat instance)
+
+Responsibilities:
+- receive style events
+- track combo state
+- calculate style score
+- update advantage meter (tug-of-war)
+- apply decay over time
+- manage repetition penalties
+
+Key Variables:
+- float PlayerAdvantage (0 - 100)
+- float ComboMultiplier
+- TArray<RecentEvents>
+- float TimeSinceLastAction
+
+Functions:
+- AddStyleEvent(FStyleEventContext Context)
+- TickStyleDecay(float DeltaTime)
+- GetAdvantageState()
+
+--------------------------------------------------------
+
+2. EStyleEvent (ENUM)
+--------------------------------------------------------
+
+Core event types:
+
+- FireballHit
+- CloneSwap
+- TeleportBehindEnemy
+- AirDashThroughEnemy
+- EnemyLaunched
+- EnemyJuggled
+- PerfectDodge
+- WallRun
+- GroundSlam
+- StyleKill
+- RepeatActionPenalty
+
+--------------------------------------------------------
+
+3. FStyleEventContext (STRUCT)
+--------------------------------------------------------
+
+Contains full context for evaluation:
+
+struct FStyleEventContext
+{
+    EStyleEvent Event;
+
+    AActor* Instigator;
+    AActor* Target;
+
+    float Distance;
+    float HeightDifference;
+
+    bool bWasAirborne;
+    bool bWasBehindTarget;
+    bool bWasFlanked;
+};
+
+--------------------------------------------------------
+
+4. UStyleEventData (DATA ASSET)
+--------------------------------------------------------
+
+Data-driven scoring rules:
+
+Variables:
+- EStyleEvent EventType
+- float BaseValue
+- float AirBonus
+- float BehindBonus
+- float ComboScaling
+- float Cooldown
+- GameplayTags Tags
+
+Purpose:
+Allows tuning style values without code changes.
+
+--------------------------------------------------------
+
+5. STYLE RULE SYSTEM
+--------------------------------------------------------
+
+Instead of hardcoding logic:
+
+BAD:
+if (BehindEnemy && Airborne && Fireball)
+    +25
+
+GOOD:
+
+Each rule is independent:
+
+- UPositioningRule
+- UAerialRule
+- UComboRule
+- USpellVarietyRule
+- URepetitionPenaltyRule
+
+Each rule:
+- reads event context
+- returns score modifier
+
+--------------------------------------------------------
+
+Rule Interface:
+
+class IStyleRule
+{
+    float Evaluate(const FStyleEventContext& Context);
+};
+
+--------------------------------------------------------
+
+6. STYLE FLOW (EXECUTION)
+--------------------------------------------------------
+
+When something happens in gameplay:
+
+1. Gameplay system triggers event:
+   StyleManager->AddStyleEvent(Context)
+
+2. Style Manager:
+   - checks repetition
+   - applies multiplier
+   - sends context to all rules
+
+3. Each rule returns value:
+   + positioning bonus
+   + aerial bonus
+   + combo bonus
+   - repetition penalty
+
+4. Final result computed:
+   float FinalStyleGain
+
+5. Applied to:
+   - Style Score
+   - Advantage Meter
+
+--------------------------------------------------------
+
+7. ADVANTAGE SYSTEM (TUG OF WAR)
+--------------------------------------------------------
+
+Single shared win condition meter:
+
+PlayerAdvantage 0 <-----> 100 EnemyAdvantage
+
+Rules:
+- starts at 50/50
+- style pushes player side
+- mistakes push enemy side
+- small passive drift toward neutral or enemy (optional tuning)
+
+Win Conditions:
+- 100 = player dominates / win
+- 0 = enemy dominates / lose
+
+--------------------------------------------------------
+
+8. REPETITION SYSTEM
+--------------------------------------------------------
+
+Prevents spam:
+
+Track last N events:
+
+RecentEvents = [Fireball, Fireball, Fireball...]
+
+Scoring:
+- first use: full value
+- repeated use: diminishing returns
+- alternating actions: bonus
+
+--------------------------------------------------------
+
+9. TAG SYSTEM (OPTIONAL BUT RECOMMENDED)
+--------------------------------------------------------
+
+Use GameplayTags for extensibility:
+
+Style.Movement
+Style.Spell.Fire
+Style.Positioning.Behind
+Style.Aerial
+Style.Clone
+
+Rules can filter by tags instead of hardcoded checks.
+
+--------------------------------------------------------
+
+DESIGN PRINCIPLES
+--------------------------------------------------------
+
+1. NO hardcoded combat logic in StyleManager
+2. ALL style logic comes from:
+   - events
+   - rules
+   - data assets
+3. Style system must not know spell details
+4. Systems only emit events, never calculate style directly
+5. Easy to extend by adding:
+   - new event
+   - new rule
+   - new data asset
+
+========================================================
+MINIMAL IMPLEMENTATION START POINT
+========================================================
+
+START HERE:
+
+- Create UStyleManagerComponent
+- Create EStyleEvent enum
+- Create AddStyleEvent(Context)
+- Hardcode 2-3 events first:
+    - FireballHit
+    - TeleportBehindEnemy
+    - PerfectDodge
+
+THEN:
+- add rules
+- add data assets
+- add advantage meter UI
+
+========================================================
+END OF ARCHITECTURE
+========================================================

@@ -15,6 +15,7 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
+class ALockOnCameraActor;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -30,6 +31,10 @@ class ARunesCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
+
+	/** camera component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	ALockOnCameraActor* CameraComponent;
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -89,8 +94,14 @@ class ARunesCharacter : public ACharacter
 	UPROPERTY()
 	USpellSlotsWidget* SpellSlotsWidget;
 
+	UPROPERTY()
+	bool bIsLockedOn = false;
+
+
 public:
 	ARunesCharacter();
+	
+	virtual void Tick(float DeltaTime) override;
 	
 
 protected:
@@ -114,6 +125,9 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UFUNCTION()
+	void LockOnUpdateTarget(AActor* NewTarget);
 
 	void KaCall();
 	void LoCall();

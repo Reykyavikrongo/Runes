@@ -3,11 +3,14 @@
 #include "RunesCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
+#include "LockOnCameraActor.h"
+#include "LockOnComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
@@ -18,6 +21,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 ARunesCharacter::ARunesCharacter()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -116,10 +121,66 @@ ARunesCharacter::ARunesCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+void ARunesCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	
+	if (bIsLockedOn)
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("is locked on"));
+		FVector DirectionOfEnemy = CameraComponent->GetLockedOnTargetLocation() - GetActorLocation();
+
+		FRotator RotationToEnemy = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), CameraComponent->GetLockedOnTargetLocation());
+
+		RotationToEnemy.Pitch = 0.f;
+		RotationToEnemy.Roll = 0.f;
+
+		SetActorRotation(FMath::RInterpTo(GetActorRotation(), RotationToEnemy, DeltaTime, 10.f));
+	}
+	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("isnt locked on"));
+}
+
 void ARunesCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Camera component doesnt exist"));
+
+	CameraComponent = GetWorld()->SpawnActor<ALockOnCameraActor>(
+		ALockOnCameraActor::StaticClass(),
+		GetActorLocation(),
+		GetActorRotation()
+	);
+
+	if (CameraComponent)
+	{
+		if (CameraComponent->GetLockOnComponent())
+		{
+			CameraComponent->GetLockOnComponent()->OnTargetChanged.AddDynamic(
+				this,
+				&ARunesCharacter::LockOnUpdateTarget
+			);
+		}
+	}
+
+	if (CameraComponent)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Camera component exists"));
+		CameraComponent->AttachToActor(
+			this,
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale
+		);
+
+		CameraComponent->GetCamera()->SetActive(true);
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->SetViewTarget(CameraComponent);
+	}
 
 	RuneRing = GetWorld()->SpawnActor<ARuneRing>();
 	RuneRing->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("spine_03"));
@@ -136,6 +197,19 @@ void ARunesCharacter::BeginPlay()
 	}
 
 	RuneInvoker->Initialize(RuneRing);
+}
+
+void ARunesCharacter::LockOnUpdateTarget(AActor* NewTarget)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("LockOnUpdateTarget Called"));
+	if (CameraComponent->GetLockOnComponent()->HasTarget())
+	{
+		bIsLockedOn = true;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		return;
+	}
+	bIsLockedOn = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 void ARunesCharacter::KaCall()

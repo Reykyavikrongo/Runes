@@ -21,5 +21,5 @@ public:
 
 protected:
     UPROPERTY()
-    ACloneActor* ActiveClone = nullptr;
+    TObjectPtr<ACloneActor> ActiveClone = nullptr;
 };
