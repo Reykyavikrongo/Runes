@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EffectProcessorComponent.h"
 #include "EnemyBaseInterface.generated.h"
 
 /**
@@ -22,5 +23,6 @@ class IEnemyBaseInterface
 	GENERATED_BODY()
 
 public:
-	virtual void TakeDamage(float Amount) = 0;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void TakeDamage(float Amount);
 };

@@ -4,11 +4,14 @@
 #include "RuneSpell_FireBall.h"
 #include "RunesCharacter.h"
 #include "FireBallProjectile.h"
+#include "LockOnCameraActor.h"
+#include "LockOnTargetInterface.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "LockOnComponent.h"
 #include "Engine/World.h"
 
 void URuneSpell_FireBall::Cast(const FSpellCastContext& Context)
 {
-    //nothing yet
     GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("FireBall casted"));
 
     if (!Context.Caster) return;
@@ -24,8 +27,16 @@ void URuneSpell_FireBall::Cast(const FSpellCastContext& Context)
 		Context.Caster->GetActorLocation() +
 		Forward * 150.f;
 
-	const FRotator SpawnRotation =
+	//projectile moves forward facing in relation to the player character
+	FRotator SpawnRotation =
 		Context.Caster->GetActorRotation();
+
+	//change spawn rotation to reflect the direction it should go to hit the lock on location of the enemy target
+	if (Context.Caster->GetCameraActor()->GetLockOnComponent()->HasTarget())
+	{
+		FVector TargetLocation = Context.Caster->GetCameraActor()->GetLockOnComponent()->GetCurrentTargetLockOnLocation();
+		SpawnRotation = (TargetLocation - SpawnLocation).Rotation();
+	}
 
 	FActorSpawnParameters Params;
 	Params.Owner = Context.Caster;

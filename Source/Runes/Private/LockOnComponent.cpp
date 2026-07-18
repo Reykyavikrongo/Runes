@@ -145,6 +145,21 @@ void ULockOnComponent::SetMidPoint(FVector EnemyLocation)
 	MidPoint = (PlayerLocation + EnemyLocation) * 0.5f;
 }
 
+FVector ULockOnComponent::GetCurrentTargetLockOnLocation() const
+{
+	if (!HasTarget())
+	{
+		return FVector::ZeroVector;
+	}
+
+	if (CurrentTarget->Implements<ULockOnTargetInterface>())
+	{
+		return ILockOnTargetInterface::Execute_GetLockOnLocation(CurrentTarget);
+	}
+
+	return CurrentTarget->GetActorLocation();
+}
+
 float ULockOnComponent::GetDistanceBetweenPlayerAndEnemy()
 {
 	return Distance;

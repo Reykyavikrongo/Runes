@@ -125,7 +125,7 @@ void ARunesCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	
+	//Turn the character towrds the locked on target
 	if (bIsLockedOn)
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("is locked on"));
@@ -210,6 +210,11 @@ void ARunesCharacter::LockOnUpdateTarget(AActor* NewTarget)
 	}
 	bIsLockedOn = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+}
+
+ALockOnCameraActor* ARunesCharacter::GetCameraActor()
+{
+	return CameraComponent;
 }
 
 void ARunesCharacter::KaCall()

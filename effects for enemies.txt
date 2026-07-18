@@ -1,372 +1,423 @@
 ========================================================
-EFFECT SYSTEM ARCHITECTURE
+
+EFFECT SYSTEM ARCHITECTURE v2
+
 ========================================================
 
 GOAL
+
 --------------------------------------------------------
 
 Create a generic effect system that:
 
-- works on enemies
-- works on players
-- works on props
-- works on future objects
+works on enemies
+works on players
+works on props
+works on future objects
 
 without effect sources needing to know what they hit.
 
 Examples:
 
-Fireball
-    ↓
-Knockback Effect
+Fireball → Knockback Effect
 
-Ice Spell
-    ↓
-Slow Effect
+Ice Spell → Slow Effect
 
-Gravity Spell
-    ↓
-Pull Effect
+Gravity Spell → Pull Effect
 
 ========================================================
-HIGH LEVEL FLOW
-========================================================
 
-Projectile
-    ↓
-Creates FEffectData
-    ↓
-Target Receives Effect
-    ↓
-UEffectProcessorComponent
-    ↓
-Processes Effect
-    ↓
-Notifies Owner
-    ↓
-Owner Reacts
-
-========================================================
 CORE PRINCIPLE
+
 ========================================================
 
-Effects do NOT modify actors directly.
+Effects are DATA.
+
+Actors own GAMEPLAY BEHAVIOR.
+
+Processors manage EFFECT LIFECYCLE.
 
 BAD:
 
-Fireball
-    ↓
-LaunchCharacter()
+Fireball → LaunchCharacter()
 
 GOOD:
 
-Fireball
-    ↓
-Creates Knockback Effect
-    ↓
-Target Effect Processor
-    ↓
-Target Reacts
+Fireball → Creates Knockback Effect → Target's EffectProcessor → Target Reacts
 
 This keeps spells independent from targets.
 
 ========================================================
-EFFECT TYPES
+
+HIGH LEVEL FLOW
+
 ========================================================
+
+Fireball Projectile
+
+OnHit()
+
+Create FEffectData + FEffectContext
+
+Find Target's UEffectProcessorComponent
+
+Processor Receives Effect
+
+Processor Broadcasts Effect Event
+
+Owner Reacts To Effect
+
+Enemy launches itself
+
+Rock applies impulse
+
+Player gets slowed
+
+========================================================
+
+EFFECT TYPES
+
+========================================================
+
+Start simple:
 
 enum class EEffectType : uint8
+
 {
-    Knockback,
-    Launch,
-    Pull,
 
-    Slow,
-    Stun,
-    Root,
+Knockback,
 
-    Burn,
-    Freeze,
+Launch,
 
-    StyleGain,
-    StyleLoss
+Pull,
+
+Slow,
+
+Stun,
+
+Root,
+
+Burn,
+
+Freeze,
+
+StyleGain,
+
+StyleLoss
+
 };
 
-New effects can be added without modifying
-existing spells.
+NOTE:
+
+This enum is fine for the first implementation.
+
+If the game grows significantly, this can later evolve into a Gameplay Tag based system without changing the overall architecture.
 
 ========================================================
+
 EFFECT DATA
+
 ========================================================
 
 struct FEffectData
+
 {
-    EEffectType Type;
 
-    float Magnitude;
+EEffectType Type;
 
-    float Duration;
+float Magnitude = 0.f;
 
-    FVector Direction;
+float Duration = 0.f;
+
+FVector Direction = FVector::ZeroVector;
+
 };
 
 Purpose:
 
-Magnitude:
-    Strength of effect
-
-Duration:
-    0 = instant effect
-
-Direction:
-    Used by knockback, pull, launch
+Magnitude = Strength of effect
+Duration = 0 means instant effect
+Direction = Used by knockback, pull, launch
 
 ========================================================
+
 EFFECT CONTEXT
+
 ========================================================
 
 struct FEffectContext
+
 {
-    AActor* Source;
 
-    AActor* Target;
+AActor* Source = nullptr;
 
-    FVector ImpactLocation;
+AActor* Target = nullptr;
+
+FVector ImpactLocation = FVector::ZeroVector;
+
 };
 
 Purpose:
 
-- style attribution
-- future AI reactions
-- kill ownership
-- future damage support
+kill attribution
+style system
+AI reactions
+future damage system
+combat logging
 
 ========================================================
+
 ACTIVE EFFECT
+
 ========================================================
 
 struct FActiveEffect
+
 {
-    FEffectData Data;
 
-    FEffectContext Context;
+FEffectData Data;
 
-    float RemainingTime;
+FEffectContext Context;
+
+float RemainingTime = 0.f;
+
 };
 
 Purpose:
 
-Allows future duration-based effects.
-
-Examples:
+Allows duration-based effects such as:
 
 Slow
 Burn
 Stun
 Freeze
 
-Instant effects do not need to be stored.
+Instant effects usually do not need to be stored.
 
 ========================================================
-EFFECT RECEIVER INTERFACE
-========================================================
 
-UEffectReceiver
-
-Responsibilities:
-
-- expose Effect Processor
-- allow projectiles to safely find it
-
-Functions:
-
-GetEffectProcessor()
-
-========================================================
 UEffectProcessorComponent
+
 ========================================================
 
-Attached to any actor that can receive effects.
+IMPORTANT:
 
-Examples:
+There is ONE EffectProcessorComponent PER ACTOR that can receive effects.
 
-Enemy
+Example:
+
 Player
+
+└── EffectProcessorComponent
+
+Goblin
+
+└── EffectProcessorComponent
+
+TrainingDummy
+
+└── EffectProcessorComponent
+
 Rock
-Boss
-Crate
+
+└── EffectProcessorComponent
+
+The processor is NOT a global singleton.
 
 Responsibilities:
 
 ReceiveEffect()
-
 Store Active Effects
-
 Tick Durations
+Remove Expired Effects
+Broadcast Effect Events
 
-Notify Owner
-
-========================================================
-PROCESSING FLOW
-========================================================
-
-Receive Effect
-    ↓
-Instant?
-    ↓
-YES
-    ↓
-Notify Owner
-
-NO
-    ↓
-Store Active Effect
-    ↓
-Tick Duration
-    ↓
-Notify Owner
-    ↓
-Remove When Finished
+The processor does NOT decide gameplay behavior.
 
 ========================================================
+
 OWNER REACTION
+
 ========================================================
 
-Effect Processor never decides gameplay.
-
-Instead:
-
-Owner receives callback.
+The owner actor decides what an effect means.
 
 Example:
 
 Enemy receives Knockback
-    ↓
-Enemy launches itself
+
+↓
+
+Enemy launches itself using LaunchCharacter()
 
 Rock receives Knockback
-    ↓
-Rock applies impulse
+
+↓
+
+Rock applies physics impulse to its mesh
 
 Player receives Slow
-    ↓
-Player reduces movement speed
 
-Each actor interprets effects differently.
+↓
 
-========================================================
-OWNER CALLBACK EXAMPLE
-========================================================
+Player reduces movement speed multiplier
 
-OnEffectReceived(
-    EffectData,
-    EffectContext
-)
-
-switch(Effect.Type)
-{
-    Knockback:
-        ...
-        break;
-
-    Slow:
-        ...
-        break;
-}
+Each actor interprets the same effect differently.
 
 ========================================================
-PROJECTILE EXAMPLE
+
+EXAMPLE IMPLEMENTATION
+
 ========================================================
 
-Fireball hits enemy
+Fireball OnHit():
 
-Create:
+1. Create EffectData
 
 Type = Knockback
 
-Magnitude = 1000
+Magnitude = 1000.f
 
 Direction = ForwardVector
 
-Send to:
+Duration = 0.f
 
-Target Effect Processor
+2. Create Context
 
-Destroy Fireball
+Source = Fireball Owner
 
-Fireball never needs to know:
+Target = Hit Actor
 
-- enemy class
-- player class
-- rock class
+ImpactLocation = Hit Point
+
+3. Find Processor
+
+OtherActor->FindComponentByClass<UEffectProcessorComponent>()
+
+4. Apply Effect
+
+Processor->ReceiveEffect(Effect, Context)
+
+5. Destroy Fireball
+
+The fireball never needs to know if it hit:
+
+Enemy
+Boss
+Player
+Rock
+Crate
 
 ========================================================
-STYLE SYSTEM INTEGRATION
+
+BASE CLASS DESIGN
+
 ========================================================
 
-Effects may eventually create style events.
+Recommended Unreal pattern:
+
+AActor
+
+└── ACharacter
+
+└── ABaseCharacter
+
+├── EffectProcessorComponent
+
+├── HealthComponent (future)
+
+└── AbilityComponent (future)
+
+├── ABaseEnemy
+
+├── APlayerCharacter
+
+└── ABossCharacter
+
+This is COMPOSITION, not inheritance-based effects.
+
+The actor does not inherit from an "Effectable" class.
+
+It simply owns an EffectProcessorComponent.
+
+========================================================
+
+INTERFACES
+
+========================================================
+
+Interfaces are still useful for capabilities such as:
+
+LockOnTargetInterface
+InteractableInterface
+DamageableInterface (optional)
+
+Shared implementation should usually live in a base class.
 
 Example:
 
-Launch Effect
-    ↓
-Enemy Airborne
-    ↓
-Style Event
+ABaseEnemy implements LockOnTargetInterface once.
 
-The effect system should never directly
-calculate style.
-
-It only supplies information.
+All enemies inherit the implementation automatically.
 
 ========================================================
-DESIGN RULES
-========================================================
 
-1. Effects are data.
-
-2. Spells create effects.
-
-3. Effect Processor handles effects.
-
-4. Owner reacts to effects.
-
-5. Effects never know target classes.
-
-6. Targets never know spell classes.
-
-7. Future effects should require:
-   - new enum value
-   - new reaction code
-
-and nothing else.
+FIRST IMPLEMENTATION MILESTONE
 
 ========================================================
-FIRST IMPLEMENTATION
-========================================================
 
-Implement only:
+Implement ONLY:
 
 EEffectType
-
 FEffectData
-
 FEffectContext
-
-UEffectReceiver
-
+FActiveEffect
 UEffectProcessorComponent
+OnEffectReceived event
+Knockback effect
 
-Knockback Effect
-
-Ignore:
+Ignore for now:
 
 Burn
 Freeze
 Slow
 Stun
+Stacking
+Resistances
+Immunities
+Damage integration
+Networking/Replication
 
-until knockback works.
+Get Knockback working end-to-end first.
 
 ========================================================
+
+DESIGN RULES
+
+========================================================
+
+1. Effects are data.
+2. Spells create effects.
+3. Actors own gameplay behavior.
+4. EffectProcessor manages effect lifecycle.
+5. Effects never know target classes.
+6. Targets never know spell classes.
+7. One processor exists per effect-receiving actor.
+8. Shared functionality belongs in base classes.
+9. Interfaces define capabilities, not shared data.
+10. New effects should usually require only:
+new effect type
+new reaction code on relevant actors
+optional processor logic for duration/stacking
+
+========================================================
+
 END
+
 ========================================================
+
+This version reflects the key architectural improvement:
+
+The effect system is now built around PER-ACTOR EffectProcessor components, while interfaces remain for capabilities such as lock-on rather than for storing effect functionality.
+
+That's the part that changed the most from the original design and is the direction I'd recommend moving forward with.

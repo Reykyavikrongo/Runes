@@ -3,13 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "Components/WidgetComponent.h"
-#include "LockOnTargetInterface.h"
+#include "BaseEnemy.h"
 #include "TrainingDummy.generated.h"
 
 UCLASS()
-class RUNES_API ATrainingDummy : public AActor, public ILockOnTargetInterface
+class RUNES_API ATrainingDummy : public ABaseEnemy
 {
 	GENERATED_BODY()
 	
@@ -23,24 +21,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* Root;
-
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* Mesh;
-
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* LockOnPoint;
-
-	UPROPERTY(VisibleAnywhere)
-	UWidgetComponent* LockOnMarker;
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// LockOnTargetInterface
-	virtual FVector GetLockOnLocation_Implementation() const override;
-	virtual bool IsLockOnValid_Implementation() const override;
 
 };

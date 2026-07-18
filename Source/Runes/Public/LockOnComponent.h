@@ -30,6 +30,7 @@ public:
 	FVector GetMidPoint() const;
 	void SetMidPoint(FVector EnemyLocation);
 
+	FVector GetCurrentTargetLockOnLocation() const;
 	float GetDistanceBetweenPlayerAndEnemy();
 	void SetDistanceBetweenPlayerAndEnemy(FVector EnemyLocation);
 

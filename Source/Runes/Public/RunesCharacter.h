@@ -128,6 +128,7 @@ public:
 
 	UFUNCTION()
 	void LockOnUpdateTarget(AActor* NewTarget);
+	ALockOnCameraActor* GetCameraActor();
 
 	void KaCall();
 	void LoCall();

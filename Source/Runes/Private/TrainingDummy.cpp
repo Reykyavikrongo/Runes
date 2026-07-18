@@ -10,21 +10,16 @@ ATrainingDummy::ATrainingDummy()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	SetRootComponent(Root);
-
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(Root);
-	Mesh->SetCollisionProfileName(TEXT("Pawn"));
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Mesh->SetCollisionObjectType(ECC_Pawn);
+	GetMesh()->SetCollisionProfileName(TEXT("Pawn"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	GetMesh()->SetCollisionObjectType(ECC_Pawn);
 
 	LockOnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LockOnPoint"));
-	LockOnPoint->SetupAttachment(Root);
+	LockOnPoint->SetupAttachment(GetMesh());
 	LockOnPoint->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
 
 	LockOnMarker = CreateDefaultSubobject<UWidgetComponent>(TEXT("LockOnMarker"));
-	LockOnMarker->SetupAttachment(Root);
+	LockOnMarker->SetupAttachment(GetMesh());
 	LockOnMarker->SetVisibility(false);
 
 }
@@ -47,16 +42,3 @@ void ATrainingDummy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-
-FVector ATrainingDummy::GetLockOnLocation_Implementation() const
-{
-	return LockOnPoint
-		? LockOnPoint->GetComponentLocation()
-		: GetActorLocation();
-}
-
-bool ATrainingDummy::IsLockOnValid_Implementation() const
-{
-	return IsValid(this);
-}
-

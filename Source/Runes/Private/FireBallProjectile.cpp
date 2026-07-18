@@ -2,11 +2,14 @@
 
 
 #include "FireBallProjectile.h"
+#include "EffectTypes.h"
+#include "EffectProcessorComponent.h"
+#include "BaseEnemy.h"
 
 // Sets default values
 AFireBallProjectile::AFireBallProjectile()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	// Root = collision (IMPORTANT)
 	Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
@@ -77,6 +80,25 @@ void AFireBallProjectile::OnHit(
 {
 	if (OtherActor && OtherActor != this)
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, TEXT("if (OtherActor && OtherActor != this)"));
+		if (UEffectProcessorComponent* Processor =
+			OtherActor->FindComponentByClass<UEffectProcessorComponent>())
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, TEXT("FindComponentByClass<UEffectProcessorComponent>()"));
+			FEffectData Effect;
+			Effect.Type = EEffectType::Knockback;
+			Effect.Magnitude = 1000.f;
+			Effect.Direction = GetActorForwardVector();
+
+			FEffectContext Context;
+			Context.Source = GetOwner();
+			Context.Target = OtherActor;
+			Context.ImpactLocation = Hit.ImpactPoint;
+
+			Cast<ABaseEnemy>(OtherActor)->GotHit();
+
+			Processor->ReceiveEffect(Effect, Context);
+		}
 		Destroy();
 	}
 }
